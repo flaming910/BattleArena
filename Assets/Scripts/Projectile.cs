@@ -22,7 +22,7 @@ public class Projectile : MonoBehaviour
     {
         if (other.CompareTag("Enemy"))
         {
-            other.GetComponent<BossBase>().TakeDamage(damage);
+            other.transform.parent.GetComponent<BossBase>().TakeDamage(damage);
             DestroyProjectile();
         }
         else if (other.CompareTag("Environment"))

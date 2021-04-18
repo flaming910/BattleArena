@@ -16,9 +16,12 @@ public class PlayerControl : MonoBehaviour
     private float timeSinceShot;
     private float timeSinceDash;
     private bool dashing;
+    private bool beingDislocated;
     private bool blocking;
     private int dashFrames;
+    private int dislocationFrames;
     private Vector3 dashVelocity;
+    private Vector3 dislocationVelocity;
     private Rigidbody rigidBody;
     private Animator playerAnim;
 
@@ -41,8 +44,18 @@ public class PlayerControl : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        if (beingDislocated)
+        {
+            transform.Translate(dislocationVelocity);
+//            rigidBody.velocity = dislocationVelocity;
+            dislocationFrames--;
+            if (dislocationFrames == 0)
+            {
+                beingDislocated = false;
+            }
+        }
         //Dash over multiple frames
-        if (dashing)
+        else if (dashing)
         {
             rigidBody.velocity = dashVelocity;
             dashFrames++;
@@ -155,4 +168,18 @@ public class PlayerControl : MonoBehaviour
         dashFrames = 0;
         dashVelocity = transform.forward * 75;
     }
+
+
+    public void TakeDamage(int damage)
+    {
+
+    }
+
+    public void Dislocate(Vector3 velocity, int framesToDislocate)
+    {
+        dislocationFrames = framesToDislocate;
+        dislocationVelocity = velocity;
+        beingDislocated = true;
+    }
+
 }

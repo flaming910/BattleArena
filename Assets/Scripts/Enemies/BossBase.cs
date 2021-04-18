@@ -6,13 +6,17 @@ public class BossBase : MonoBehaviour
     protected int phase;
     protected bool playerInRange;
 
-    private float health;
+    protected Rigidbody rigidBody;
+
+    [SerializeField] private float health;
     [SerializeField] private float maxHealth;
+    [SerializeField] protected int contactDamage;
     // Start is called before the first frame update
     protected virtual void Start()
     {
         phase = 1;
         health = maxHealth;
+        rigidBody = GetComponent<Rigidbody>();
     }
 
     //Handles taking damage and change of phases
@@ -37,7 +41,7 @@ public class BossBase : MonoBehaviour
         }
     }
 
-    protected void OnTriggerEnter(Collider other)
+    protected virtual void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {

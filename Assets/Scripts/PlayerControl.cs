@@ -6,22 +6,29 @@ public class PlayerControl : MonoBehaviour
     [HideInInspector] public bool canAttack;
     [HideInInspector] public bool meleeActive;
 
+    [SerializeField] private int maxHealth;
     [SerializeField] private float speed;
     [SerializeField] private GameObject bullet;
     [SerializeField] private GameObject blockCollider;
     [SerializeField] private float reloadTime;
     [SerializeField] private float dashCooldown;
 
+    public int health;
     private float actualSpeed;
+
     private float timeSinceShot;
     private float timeSinceDash;
+    private float iFrames;
+
     private bool dashing;
     private bool beingDislocated;
     private bool blocking;
     private int dashFrames;
     private int dislocationFrames;
+
     private Vector3 dashVelocity;
     private Vector3 dislocationVelocity;
+
     private Rigidbody rigidBody;
     private Animator playerAnim;
 
@@ -33,6 +40,7 @@ public class PlayerControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        health = maxHealth;
         rigidBody = GetComponent<Rigidbody>();
         playerAnim = GetComponent<Animator>();
         timeSinceShot = reloadTime;
@@ -83,6 +91,10 @@ public class PlayerControl : MonoBehaviour
 
     private void Update()
     {
+        if (iFrames > 0)
+        {
+            iFrames -= Time.deltaTime;
+        }
         //Look at mouse
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane plane = new Plane(Vector3.up, Vector3.zero);
@@ -101,7 +113,7 @@ public class PlayerControl : MonoBehaviour
         {
             blockCollider.SetActive(true);
             blocking = true;
-            actualSpeed = speed * 0.45f;
+            actualSpeed = speed * 0.3f;
         }
         else
         {
@@ -113,7 +125,7 @@ public class PlayerControl : MonoBehaviour
         //Shoot
         if (timeSinceShot <= reloadTime)
         {
-            actualSpeed = speed * (Mathf.Min(0.3f, timeSinceShot / reloadTime) + 0.5f);
+            actualSpeed = speed * 0.38f;
             timeSinceShot += Time.deltaTime;
         }
 
@@ -146,7 +158,7 @@ public class PlayerControl : MonoBehaviour
     private void Shoot()
     {
         var bulletObj = Instantiate(bullet, transform.position, transform.rotation);
-        bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 20;
+        bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 25;
         bulletObj.GetComponent<Projectile>().lifetime = 1.5f;
         bulletObj.GetComponent<Projectile>().damage = 1f;
         //canAttack = false;
@@ -170,9 +182,15 @@ public class PlayerControl : MonoBehaviour
     }
 
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, bool blockable)
     {
-
+        if (blockable && blocking) return;
+        health -= damage;
+        iFrames = 0.17f;
+        if (health <= 0)
+        {
+            //Die
+        }
     }
 
     public void Dislocate(Vector3 velocity, int framesToDislocate)

@@ -41,7 +41,7 @@ public class PlayerControl : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        if (meleeActive) return;
+        //Dash over multiple frames
         if (dashing)
         {
             rigidBody.velocity = dashVelocity;
@@ -51,6 +51,12 @@ public class PlayerControl : MonoBehaviour
                 dashing = false;
             }
         }
+        //Prevent movement during melee
+        else if (meleeActive)
+        {
+            rigidBody.velocity = Vector3.zero;
+        }
+        //Move
         else
         {
             float zVelocity = Input.GetAxis("Vertical");
@@ -64,6 +70,7 @@ public class PlayerControl : MonoBehaviour
 
     private void Update()
     {
+        //Look at mouse
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane plane = new Plane(Vector3.up, Vector3.zero);
 
@@ -75,9 +82,25 @@ public class PlayerControl : MonoBehaviour
             float rotation=Mathf.Atan2(direction.x, direction.z)*Mathf.Rad2Deg;
             transform.rotation=Quaternion.Euler(0, rotation, 0);
         }
+
+        //Block
+        if (Input.GetKey(KeyCode.Space))
+        {
+            blockCollider.SetActive(true);
+            blocking = true;
+            actualSpeed = speed * 0.45f;
+        }
+        else
+        {
+            actualSpeed = speed;
+            blocking = false;
+            blockCollider.SetActive(false);
+        }
+
         //Shoot
         if (timeSinceShot <= reloadTime)
         {
+            actualSpeed = speed * (Mathf.Min(0.3f, timeSinceShot / reloadTime) + 0.5f);
             timeSinceShot += Time.deltaTime;
         }
 
@@ -103,47 +126,33 @@ public class PlayerControl : MonoBehaviour
             Dash();
         }
 
-        if (Input.GetKey(KeyCode.Space))
-        {
-            blockCollider.SetActive(true);
-            blocking = true;
-            actualSpeed = speed * 0.45f;
-        }
-        else
-        {
-            actualSpeed = speed;
-            blocking = false;
-            blockCollider.SetActive(false);
-        }
+
     }
 
+    //Handle bullet instantiating
     private void Shoot()
     {
         var bulletObj = Instantiate(bullet, transform.position, transform.rotation);
         bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 20;
         bulletObj.GetComponent<Projectile>().lifetime = 1.5f;
         bulletObj.GetComponent<Projectile>().damage = 1f;
-        canAttack = false;
+        //canAttack = false;
         timeSinceShot = 0;
-
     }
 
-    public void MeleeStart()
-    {
-        meleeActive = !meleeActive;
-    }
-
+    //Call melee animation which handles all the necessary things
     private void Melee()
     {
+        //3 damage
         playerAnim.SetTrigger(MeleeParam);
     }
 
+    //Initiate dashing
     private void Dash()
     {
         timeSinceDash = 0;
         dashing = true;
         dashFrames = 0;
         dashVelocity = transform.forward * 75;
-//        rigidBody.AddForce(transform.forward * 25, ForceMode.Impulse);
     }
 }

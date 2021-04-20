@@ -6,14 +6,14 @@ public class PlayerControl : MonoBehaviour
     [HideInInspector] public bool canAttack;
     [HideInInspector] public bool meleeActive;
 
-    [SerializeField] private int maxHealth;
+    [SerializeField] private float maxHealth;
     [SerializeField] private float speed;
     [SerializeField] private GameObject bullet;
     [SerializeField] private GameObject blockCollider;
     [SerializeField] private float reloadTime;
     [SerializeField] private float dashCooldown;
 
-    public int health;
+    public float health;
     private float actualSpeed;
 
     private float timeSinceShot;
@@ -47,6 +47,8 @@ public class PlayerControl : MonoBehaviour
         timeSinceDash = dashCooldown;
         canAttack = true;
         actualSpeed = speed;
+
+        UIManager.Instance.SetPlayerHealth(maxHealth, health);
     }
 
     // Update is called once per frame
@@ -187,9 +189,13 @@ public class PlayerControl : MonoBehaviour
         if (blockable && blocking) return;
         health -= damage;
         iFrames = 0.17f;
+        UIManager.Instance.SetPlayerHealth(maxHealth, health);
+        StartCoroutine(UIManager.Instance.GetHit());
         if (health <= 0)
         {
             //Die
+            Destroy(this.gameObject);
+            UIManager.Instance.TriggerDeathScreen();
         }
     }
 

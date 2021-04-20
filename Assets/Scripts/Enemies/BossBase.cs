@@ -17,12 +17,15 @@ public class BossBase : MonoBehaviour
         phase = 1;
         health = maxHealth;
         rigidBody = GetComponent<Rigidbody>();
+
+        UIManager.Instance.SetBossHealth(maxHealth, health);
     }
 
     //Handles taking damage and change of phases
     public void TakeDamage(float damage)
     {
         health -= damage;
+        UIManager.Instance.SetBossHealth(maxHealth, health);
         if (health <= maxHealth * 0.75f && health > maxHealth * 0.5f)
         {
             phase = 2;
@@ -38,6 +41,8 @@ public class BossBase : MonoBehaviour
         else if(health < 0)
         {
             //Die
+            Destroy(this.gameObject);
+            UIManager.Instance.TriggerVictoryScreen();
         }
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -11,7 +12,8 @@ public class Stormbringer : BossBase
         StormCalling,
         ThunderWaving,
         Leaping,
-        Meleeing
+        Meleeing,
+        Null
     }
 
     //State management
@@ -31,12 +33,14 @@ public class Stormbringer : BossBase
 
     private int leapDamage;
     private float timeBetweenAttacks;
+    private float initialWait;
 
     // Start is called before the first frame update
     protected override void Start()
     {
         base.Start();
         timeBetweenAttacks = 0.25f;
+        initialWait = timeBetweenAttacks;
         weightingWithMelee = stormCallWeighting + thunderWaveWeighting + leapWeighting + meleeWeighting;
         weightingWithoutMelee = stormCallWeighting + thunderWaveWeighting + leapWeighting;
     }
@@ -51,21 +55,18 @@ public class Stormbringer : BossBase
         {
             Leap();
         }
-//        return;
+//        return; //This basically removes its brain
 
-        switch (bossState)
+        if (initialWait > 0)
         {
-            case BossState.StartingAnAttack:
-                DetermineAttack();
-                break;
-            case BossState.Leaping:
-                LeapAttack();
-                break;
-            case BossState.Meleeing:
-                MeleeAttack();
-                break;
+            initialWait -= Time.deltaTime;
+            return;
         }
 
+        if (bossState == BossState.StartingAnAttack)
+        {
+            DetermineAttack();
+        }
     }
 
     //This gets the boss ready to do its attacks over the course of the frame
@@ -107,27 +108,27 @@ public class Stormbringer : BossBase
         int stormsToCall = 0;
         float windup = 0;
         float delay = 0;
-        float attackDuration = 2.5f;
+        float attackDuration = 2.75f;
         switch (phase)
         {
             case 1:
                 stormsToCall = 3;
-                windup = 0.875f;
+                windup = 0.885f;
                 delay = attackDuration/stormsToCall;
                 break;
             case 2:
                 stormsToCall = 5;
-                windup = 0.675f;
+                windup = 0.685f;
                 delay = attackDuration/stormsToCall;
                 break;
             case 3:
                 stormsToCall = 8;
-                windup = 0.475f;
+                windup = 0.485f;
                 delay = attackDuration/stormsToCall;
                 break;
             case 4:
                 stormsToCall = 12;
-                windup = 0.275f;
+                windup = 0.285f;
                 delay = attackDuration/stormsToCall;
                 break;
         }
@@ -187,15 +188,12 @@ public class Stormbringer : BossBase
                 break;
             case 2:
                 leapDamage = 13;
-//                ThunderWave(1);
                 break;
             case 3:
                 leapDamage = 17;
-//                ThunderWave(2);
                 break;
             case 4:
                 leapDamage = 22;
-//                ThunderWave(3);
                 break;
         }
 
@@ -223,7 +221,7 @@ public class Stormbringer : BossBase
             //TODO: Play an animation here
             yield return new WaitForSeconds(delay);
         }
-
+        yield return new WaitForSeconds(windup - delay);
         yield return new WaitForSeconds(timeBetweenAttacks);
         bossState = BossState.StartingAnAttack;
     }
@@ -249,18 +247,15 @@ public class Stormbringer : BossBase
     private IEnumerator LeapAttack()
     {
         var startingPos = transform.position;
-        var targetPos = GameManager.Instance.PlayerPosition;
-        targetPos.y = startingPos.y;
+
         var halfWayPos = startingPos;
         halfWayPos.y += 8;
         float timePassed = 0;
         rigidBody.useGravity = false;
-        transform.LookAt(targetPos);
-        print("jump started");
         while (Vector3.Distance(transform.position, halfWayPos) > 0.02f)
         {
             timePassed += Time.deltaTime;
-            transform.position = Vector3.Lerp(startingPos, halfWayPos, timePassed / 0.5f);
+            transform.position = Vector3.Lerp(startingPos, halfWayPos, timePassed / 0.52f);
             if (timePassed >= 0.5f)
             {
                 transform.position = halfWayPos;
@@ -269,6 +264,8 @@ public class Stormbringer : BossBase
             yield return new WaitForFixedUpdate();
         }
         timePassed = 0;
+        var targetPos = GameManager.Instance.PlayerPosition;
+        targetPos.y = startingPos.y;
         startingPos = transform.position;
         while (Vector3.Distance(transform.position, targetPos) > 0.02f)
         {
@@ -281,11 +278,14 @@ public class Stormbringer : BossBase
             }
             yield return new WaitForFixedUpdate();
         }
-        print("jump finished");
 
         rigidBody.useGravity = true;
         switch (phase)
         {
+            case 1:
+                yield return new WaitForSeconds(timeBetweenAttacks);
+                bossState = BossState.StartingAnAttack;
+                break;
             case 2:
                 ThunderWave(1);
                 break;
@@ -296,11 +296,6 @@ public class Stormbringer : BossBase
                 ThunderWave(1);
                 break;
         }
-
-
-        yield return new WaitForSeconds(timeBetweenAttacks);
-        bossState = BossState.StartingAnAttack;
-
     }
 
     private void MeleeAttack()
@@ -319,14 +314,13 @@ public class Stormbringer : BossBase
             if (contact.thisCollider.transform.parent == this.transform)
             {
                 var player = other.gameObject.GetComponent<PlayerControl>();
+                var stormBringerPos = transform.position;
+                var playerPos = player.gameObject.transform.position;
+                stormBringerPos.y = 0;
+                playerPos.y = 0;
                 if (bossState == BossState.Leaping)
                 {
                     player.TakeDamage(leapDamage, false);
-                    leapDamage = 0;
-                    var stormBringerPos = transform.position;
-                    var playerPos = player.gameObject.transform.position;
-                    stormBringerPos.y = 0;
-                    playerPos.y = 0;
 
                     Vector3 direction = (stormBringerPos - playerPos).normalized;
                     if (direction == Vector3.zero)
@@ -335,9 +329,12 @@ public class Stormbringer : BossBase
                         direction = new Vector3(unitCircle.x, 0, unitCircle.y);
                     }
                     player.Dislocate(direction * -1.5f, 5);
+                    bossState = BossState.Null;
                 }
                 else
                 {
+                    Vector3 direction = (stormBringerPos - playerPos).normalized;
+                    player.Dislocate(direction * -1f, 2);
                     player.TakeDamage(contactDamage, false);
                 }
             }

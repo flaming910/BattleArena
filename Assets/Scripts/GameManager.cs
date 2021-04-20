@@ -22,19 +22,22 @@ public class GameManager : MonoBehaviour
     }
 
     [SerializeField] private GameObject player;
-    // Start is called before the first frame update
-    void Start()
-    {
 
+    public GameObject Player
+    {
+        get
+        {
+            if (player) return player;
+            return null;
+        }
     }
 
-    // Update is called once per frame
-    void Update()
+    public Vector3 PlayerPosition
     {
-
+        get
+        {
+            if (player) return player.transform.position;
+            return Vector3.zero;
+        }
     }
-
-    public GameObject Player => player;
-
-    public Vector3 PlayerPosition => player.transform.position;
 }

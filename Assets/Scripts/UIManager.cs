@@ -30,7 +30,9 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject victoryText;
     [SerializeField] private GameObject countdownTimer;
     [SerializeField] private GameObject hitOutline;
+    [SerializeField] private TextMeshProUGUI runTimeText;
     private int countdownVal;
+    private string runTime;
 
     public void SetBossHealth(float maxHealth, float health)
     {
@@ -100,5 +102,11 @@ public class UIManager : MonoBehaviour
     public void BackToMenu()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    }
+
+    public void UpdateRunTime(string runTime)
+    {
+        this.runTime = runTime;
+        runTimeText.text = runTime;
     }
 }

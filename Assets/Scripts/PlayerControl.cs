@@ -1,5 +1,7 @@
 using System;
+using Unity.Mathematics;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class PlayerControl : MonoBehaviour
 {
@@ -9,7 +11,7 @@ public class PlayerControl : MonoBehaviour
     [SerializeField] private float maxHealth;
     [SerializeField] private float speed;
     [SerializeField] private GameObject bullet;
-    [SerializeField] private GameObject blockCollider;
+    [SerializeField] private Transform bulletOrigin;
     [SerializeField] private float reloadTime;
     [SerializeField] private float dashCooldown;
 
@@ -34,6 +36,18 @@ public class PlayerControl : MonoBehaviour
 
     #region AnimatorParameters
     private static readonly int MeleeParam = Animator.StringToHash("Melee");
+    private static readonly int ShootParam = Animator.StringToHash("Shoot");
+    private static readonly int BlockingParam = Animator.StringToHash("Blocking");
+    private static readonly int DirectionParam = Animator.StringToHash("Direction");
+    private static readonly int XDirectionParam = Animator.StringToHash("xDirection");
+    private static readonly int ZDirectionParam = Animator.StringToHash("zDirection");
+    #endregion
+
+    #region AudioParameters
+    private AudioSource audioSource;
+    private float initialPitch;
+    private float initialVolume;
+    [SerializeField] private AudioClip[] audioClips;
 
     #endregion
 
@@ -43,6 +57,9 @@ public class PlayerControl : MonoBehaviour
         health = maxHealth;
         rigidBody = GetComponent<Rigidbody>();
         playerAnim = GetComponent<Animator>();
+        audioSource = GetComponent<AudioSource>();
+        initialPitch = audioSource.pitch;
+        initialVolume = audioSource.volume;
         timeSinceShot = reloadTime;
         timeSinceDash = dashCooldown;
         canAttack = true;
@@ -54,6 +71,7 @@ public class PlayerControl : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
+        playerAnim.SetInteger(DirectionParam, 0);
         if (beingDislocated)
         {
             transform.Translate(dislocationVelocity);
@@ -86,8 +104,18 @@ public class PlayerControl : MonoBehaviour
             float xVelocity = Input.GetAxis("Horizontal");
             var targetVelocity = new Vector3(xVelocity, 0, zVelocity);
             targetVelocity = Vector3.ClampMagnitude(targetVelocity, 1);
+            var directionalVelocity = Quaternion.AngleAxis(-transform.rotation.eulerAngles.y, Vector3.up) * targetVelocity;
             targetVelocity *= actualSpeed;
             rigidBody.velocity = targetVelocity;
+            bool fullSpeed = Math.Abs(actualSpeed - speed) < 0.01f;
+
+            if (!fullSpeed)
+            {
+                directionalVelocity *= 0.5f;
+            }
+
+            playerAnim.SetFloat(XDirectionParam, directionalVelocity.x);
+            playerAnim.SetFloat(ZDirectionParam, directionalVelocity.z);
         }
     }
 
@@ -113,7 +141,7 @@ public class PlayerControl : MonoBehaviour
         //Block
         if (Input.GetKey(KeyCode.Space))
         {
-            blockCollider.SetActive(true);
+            playerAnim.SetBool(BlockingParam, true);
             blocking = true;
             actualSpeed = speed * 0.3f;
         }
@@ -121,7 +149,7 @@ public class PlayerControl : MonoBehaviour
         {
             actualSpeed = speed;
             blocking = false;
-            blockCollider.SetActive(false);
+            playerAnim.SetBool(BlockingParam, false);
         }
 
         //Shoot
@@ -159,10 +187,11 @@ public class PlayerControl : MonoBehaviour
     //Handle bullet instantiating
     private void Shoot()
     {
-        var bulletObj = Instantiate(bullet, transform.position, transform.rotation);
-        bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 25;
-        bulletObj.GetComponent<Projectile>().lifetime = 1.5f;
-        bulletObj.GetComponent<Projectile>().damage = 1f;
+        var bulletObj = Instantiate(bullet, bulletOrigin.position, transform.rotation);
+        bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 32;
+        bulletObj.GetComponent<Projectile>().lifetime = 1.4f;
+        bulletObj.GetComponent<Projectile>().damage = 1.6f;
+        playerAnim.SetTrigger(ShootParam);
         //canAttack = false;
         timeSinceShot = 0;
     }
@@ -180,7 +209,15 @@ public class PlayerControl : MonoBehaviour
         timeSinceDash = 0;
         dashing = true;
         dashFrames = 0;
-        dashVelocity = transform.forward * 75;
+        if (rigidBody.velocity.magnitude <= 0.05f)
+        {
+            dashVelocity = transform.forward * 75;
+        }
+        else
+        {
+            dashVelocity = rigidBody.velocity.normalized * 75;
+        }
+
     }
 
 
@@ -204,6 +241,14 @@ public class PlayerControl : MonoBehaviour
         dislocationFrames = framesToDislocate;
         dislocationVelocity = velocity;
         beingDislocated = true;
+    }
+
+    public void FootstepSound()
+    {
+        audioSource.pitch = initialPitch + (Random.Range(-0.05f, 0.05f));
+        audioSource.volume = initialVolume + (Random.Range(-0.05f, 0.05f));
+
+        audioSource.PlayOneShot(audioClips[Random.Range(0, audioClips.Length)]);
     }
 
 }

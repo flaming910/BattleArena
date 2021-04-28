@@ -415,6 +415,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: EmissiveGreen
+    second: {fileID: 2100000, guid: 524c1deec45656448a26eea942ca1dda, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: m_legendary_robot_
     second: {fileID: 2100000, guid: 4584dde376ee8624cb0897d23e709610, type: 2}
   materials:

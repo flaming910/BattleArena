@@ -1,7 +1,19 @@
 using System;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
+
+[Serializable]
+public struct AudioSourceParameters
+{
+    public AudioSource audioSource;
+    [HideInInspector] public float initialPitch;
+    [HideInInspector] public float initialVolume;
+}
+
 
 public class PlayerControl : MonoBehaviour
 {
@@ -44,12 +56,17 @@ public class PlayerControl : MonoBehaviour
     #endregion
 
     #region AudioParameters
-    private AudioSource audioSource;
+    [SerializeField] private AudioSourceParameters footstepAudioParams;
+    [SerializeField] private AudioSourceParameters gunAudioParams;
     private float initialPitch;
     private float initialVolume;
-    [SerializeField] private AudioClip[] audioClips;
+    [FormerlySerializedAs("audioClips")] [SerializeField] private AudioClip[] footstepAudio;
+    [SerializeField]private AudioClip gunshotSound;
 
     #endregion
+
+    private ChromaticAberration chromaticAberration;
+    private Camera cam;
 
     // Start is called before the first frame update
     void Start()
@@ -57,13 +74,19 @@ public class PlayerControl : MonoBehaviour
         health = maxHealth;
         rigidBody = GetComponent<Rigidbody>();
         playerAnim = GetComponent<Animator>();
-        audioSource = GetComponent<AudioSource>();
-        initialPitch = audioSource.pitch;
-        initialVolume = audioSource.volume;
+        footstepAudioParams.initialPitch = footstepAudioParams.audioSource.pitch;
+        footstepAudioParams.initialVolume = footstepAudioParams.audioSource.volume;
+
+        gunAudioParams.initialPitch = gunAudioParams.audioSource.pitch;
+        gunAudioParams.initialVolume = gunAudioParams.audioSource.volume;
+
         timeSinceShot = reloadTime;
         timeSinceDash = dashCooldown;
         canAttack = true;
         actualSpeed = speed;
+
+        cam = Camera.main;
+        cam.GetComponent<Volume>().profile.TryGet<ChromaticAberration>(out chromaticAberration);
 
         UIManager.Instance.SetPlayerHealth(maxHealth, health);
     }
@@ -77,9 +100,14 @@ public class PlayerControl : MonoBehaviour
             transform.Translate(dislocationVelocity);
 //            rigidBody.velocity = dislocationVelocity;
             dislocationFrames--;
+            chromaticAberration.active = true;
+            cam.fieldOfView = 75;
+
             if (dislocationFrames == 0)
             {
                 beingDislocated = false;
+                cam.fieldOfView = 70;
+                chromaticAberration.active = false;
             }
         }
         //Dash over multiple frames
@@ -87,15 +115,15 @@ public class PlayerControl : MonoBehaviour
         {
             rigidBody.velocity = dashVelocity;
             dashFrames++;
+
+            chromaticAberration.active = true;
+            cam.fieldOfView = 75;
             if (dashFrames == 5)
             {
                 dashing = false;
+                cam.fieldOfView = 70;
+                chromaticAberration.active = false;
             }
-        }
-        //Prevent movement during melee
-        else if (meleeActive)
-        {
-            rigidBody.velocity = Vector3.zero;
         }
         //Move
         else
@@ -165,10 +193,6 @@ public class PlayerControl : MonoBehaviour
             {
                 Shoot();
             }
-            else if (Input.GetKey(KeyCode.Mouse1))
-            {
-                Melee();
-            }
         }
 
         //Dash
@@ -176,7 +200,7 @@ public class PlayerControl : MonoBehaviour
         {
             timeSinceDash += Time.deltaTime;
         }
-        else if (Input.GetKeyDown(KeyCode.LeftShift) && !meleeActive && !blocking)
+        else if ( (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.Mouse1)) && !meleeActive && !blocking)
         {
             Dash();
         }
@@ -189,9 +213,14 @@ public class PlayerControl : MonoBehaviour
     {
         var bulletObj = Instantiate(bullet, bulletOrigin.position, transform.rotation);
         bulletObj.GetComponent<Rigidbody>().velocity = transform.forward * 32;
-        bulletObj.GetComponent<Projectile>().lifetime = 1.4f;
-        bulletObj.GetComponent<Projectile>().damage = 1.6f;
+        bulletObj.GetComponent<Projectile>().lifetime = 1.8f;
+        bulletObj.GetComponent<Projectile>().damage = 1.8f;
         playerAnim.SetTrigger(ShootParam);
+
+        gunAudioParams.audioSource.pitch = gunAudioParams.initialPitch + (Random.Range(-0.05f, 0.05f));
+        gunAudioParams.audioSource.volume = gunAudioParams.initialVolume + (Random.Range(-0.025f, 0.025f));
+        gunAudioParams.audioSource.PlayOneShot(gunshotSound);
+
         //canAttack = false;
         timeSinceShot = 0;
     }
@@ -245,10 +274,10 @@ public class PlayerControl : MonoBehaviour
 
     public void FootstepSound()
     {
-        audioSource.pitch = initialPitch + (Random.Range(-0.05f, 0.05f));
-        audioSource.volume = initialVolume + (Random.Range(-0.05f, 0.05f));
+        footstepAudioParams.audioSource.pitch = footstepAudioParams.initialPitch + (Random.Range(-0.05f, 0.05f));
+        footstepAudioParams.audioSource.volume = footstepAudioParams.initialVolume + (Random.Range(-0.05f, 0.05f));
 
-        audioSource.PlayOneShot(audioClips[Random.Range(0, audioClips.Length)]);
+        footstepAudioParams.audioSource.PlayOneShot(footstepAudio[Random.Range(0, footstepAudio.Length)]);
     }
 
 }

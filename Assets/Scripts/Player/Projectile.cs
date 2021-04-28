@@ -1,9 +1,12 @@
 using UnityEngine;
+using UnityEngine.VFX;
 
 public class Projectile : MonoBehaviour
 {
     public float lifetime;
     public float damage;
+
+    [SerializeField] private GameObject bulletImpact;
 
     // Update is called once per frame
     void Update()
@@ -14,25 +17,29 @@ public class Projectile : MonoBehaviour
         }
         else
         {
-            DestroyProjectile();
+            //DestroyProjectile();
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (other.CompareTag("Enemy"))
         {
             other.transform.parent.GetComponent<BossBase>().TakeDamage(damage);
-            DestroyProjectile();
+            DestroyProjectile(other);
         }
         else if (other.CompareTag("Environment"))
         {
-            DestroyProjectile();
+            DestroyProjectile(other);
         }
     }
 
-    private void DestroyProjectile()
+    private void DestroyProjectile(Collider other)
     {
+
+        bulletImpact.transform.parent = null;
+//        bulletImpact.transform.position = other.ClosestPointOnBounds(transform.position)- (transform.forward * 0.07f);
+        bulletImpact.SetActive(true);
         Destroy(gameObject);
     }
 
